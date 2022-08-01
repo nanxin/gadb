@@ -113,6 +113,19 @@ func (d Device) Forward(localPort, remotePort int, noRebind ...bool) (err error)
 	return
 }
 
+func (d Device) RawForward(local, remote string, noRebind ...bool) (err error) {
+	command := ""
+
+	if len(noRebind) != 0 && noRebind[0] {
+		command = fmt.Sprintf("host-serial:%s:forward:norebind:%s;%s", d.serial, local, remote)
+	} else {
+		command = fmt.Sprintf("host-serial:%s:forward:%s;%s", d.serial, local, remote)
+	}
+
+	_, err = d.adbClient.executeCommand(command, true)
+	return
+}
+
 func (d Device) ForwardList() (deviceForwardList []DeviceForward, err error) {
 	var forwardList []DeviceForward
 	if forwardList, err = d.adbClient.ForwardList(); err != nil {
