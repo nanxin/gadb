@@ -2,6 +2,7 @@ package gadb
 
 import (
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -12,6 +13,33 @@ const AdbDaemonPort = 5555
 type Client struct {
 	host string
 	port int
+}
+
+var AdbPath string
+
+func init() {
+	var err error
+	AdbPath, err = exec.LookPath("adb")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func StartServer() error {
+	err := exec.Command(AdbPath, "-L", fmt.Sprintf("tcp:localhost:%d", AdbServerPort), "start-server").Run()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func KillServer() error {
+	output, err := exec.Command(AdbPath, "kill-server").CombinedOutput()
+	if err != nil {
+		fmt.Println(string(output))
+		return err
+	}
+	return nil
 }
 
 func NewClient() (Client, error) {

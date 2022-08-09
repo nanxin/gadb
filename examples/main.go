@@ -1,13 +1,16 @@
 package main
 
 import (
-	"github.com/electricbubble/gadb"
+	"fmt"
+	"github.com/nanxin/gadb"
 	"log"
 	"os"
 	"strings"
 )
 
 func main() {
+	fmt.Println(gadb.KillServer())
+	fmt.Println(gadb.StartServer())
 	adbClient, err := gadb.NewClient()
 	checkErr(err, "fail to connect adb server")
 
