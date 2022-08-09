@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -30,6 +32,8 @@ const (
 	StateOffline      DeviceState = "offline"
 	StateDisconnected DeviceState = "disconnected"
 )
+
+var DeviceTempPath = "/data/local/tmp"
 
 var deviceStateStrings = map[string]DeviceState{
 	"":        StateDisconnected,
@@ -308,5 +312,97 @@ func (d Device) Pull(remotePath string, dest io.Writer) (err error) {
 	}
 
 	err = sync.WriteStream(dest)
+	return
+}
+
+func (d *Device) AppInstall(apkPath string, reinstall ...bool) (err error) {
+	if err = d.check(); err != nil {
+		return err
+	}
+
+	apkName := filepath.Base(apkPath)
+	if !strings.HasSuffix(strings.ToLower(apkName), ".apk") {
+		return fmt.Errorf("apk file must have an extension of '.apk': %s", apkPath)
+	}
+
+	var apkFile *os.File
+	if apkFile, err = os.Open(apkPath); err != nil {
+		return fmt.Errorf("apk file: %w", err)
+	}
+
+	remotePath := path.Join(DeviceTempPath, apkName)
+	if err = d.PushFile(apkFile, remotePath); err != nil {
+		return fmt.Errorf("apk push: %w", err)
+	}
+
+	var shellOutput string
+	if len(reinstall) != 0 && reinstall[0] {
+		shellOutput, err = d.RunShellCommand("pm install", "-r", remotePath)
+	} else {
+		shellOutput, err = d.RunShellCommand("pm install", remotePath)
+	}
+
+	if err != nil {
+		return fmt.Errorf("apk install: %w", err)
+	}
+
+	if !strings.Contains(shellOutput, "Success") {
+		return fmt.Errorf("apk installed: %s", shellOutput)
+	}
+
+	return
+}
+
+func (d *Device) AppUninstall(appPackageName string, keepDataAndCache ...bool) (err error) {
+	if err = d.check(); err != nil {
+		return err
+	}
+
+	var shellOutput string
+	if len(keepDataAndCache) != 0 && keepDataAndCache[0] {
+		shellOutput, err = d.RunShellCommand("pm uninstall", "-k", appPackageName)
+	} else {
+		shellOutput, err = d.RunShellCommand("pm uninstall", appPackageName)
+	}
+
+	if err != nil {
+		return fmt.Errorf("apk uninstall: %w", err)
+	}
+
+	if !strings.Contains(shellOutput, "Success") {
+		return fmt.Errorf("apk uninstalled: %s", shellOutput)
+	}
+
+	return
+}
+
+func (d *Device) check() error {
+	if d.Serial() == "" {
+		return errors.New("adb daemon: the device is not ready")
+	}
+	return nil
+}
+
+func (d *Device) AppLaunch(appPackageName string) (err error) {
+	if err = d.check(); err != nil {
+		return err
+	}
+
+	var sOutput string
+	if sOutput, err = d.RunShellCommand("monkey -p", appPackageName, "-c android.intent.category.LAUNCHER 1"); err != nil {
+		return err
+	}
+	if strings.Contains(sOutput, "monkey aborted") {
+		return fmt.Errorf("app launch: %s", strings.TrimSpace(sOutput))
+	}
+
+	return
+}
+
+func (d *Device) AppTerminate(appPackageName string) (err error) {
+	if err = d.check(); err != nil {
+		return err
+	}
+	_, err = d.RunShellCommand("am force-stop", appPackageName)
 	return
 }
