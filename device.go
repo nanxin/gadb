@@ -1,6 +1,7 @@
 package gadb
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -314,6 +315,24 @@ func (d Device) Pull(remotePath string, dest io.Writer) (err error) {
 
 	err = sync.WriteStream(dest)
 	return
+}
+
+func (d Device) ShellStream(cmd string) (*transport, *bufio.Scanner, error) {
+	tp, err := d.createDeviceTransport()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := tp.Send(fmt.Sprintf("shell:%s", cmd)); err != nil {
+		tp.Close()
+		return nil, nil, err
+	}
+	if err = tp.VerifyResponse(); err != nil {
+		tp.Close()
+		return nil, nil, err
+	}
+
+	return &tp, bufio.NewScanner(tp.sock), nil
 }
 
 func (d *Device) AppInstall(apkPath string, reinstall ...bool) (err error) {
