@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -316,10 +317,6 @@ func (d Device) Pull(remotePath string, dest io.Writer) (err error) {
 }
 
 func (d *Device) AppInstall(apkPath string, reinstall ...bool) (err error) {
-	if err = d.check(); err != nil {
-		return err
-	}
-
 	apkName := filepath.Base(apkPath)
 	if !strings.HasSuffix(strings.ToLower(apkName), ".apk") {
 		return fmt.Errorf("apk file must have an extension of '.apk': %s", apkPath)
@@ -354,10 +351,6 @@ func (d *Device) AppInstall(apkPath string, reinstall ...bool) (err error) {
 }
 
 func (d *Device) AppUninstall(appPackageName string, keepDataAndCache ...bool) (err error) {
-	if err = d.check(); err != nil {
-		return err
-	}
-
 	var shellOutput string
 	if len(keepDataAndCache) != 0 && keepDataAndCache[0] {
 		shellOutput, err = d.RunShellCommand("pm uninstall", "-k", appPackageName)
@@ -376,18 +369,7 @@ func (d *Device) AppUninstall(appPackageName string, keepDataAndCache ...bool) (
 	return
 }
 
-func (d *Device) check() error {
-	if d.Serial() == "" {
-		return errors.New("adb daemon: the device is not ready")
-	}
-	return nil
-}
-
 func (d *Device) AppLaunch(appPackageName string) (err error) {
-	if err = d.check(); err != nil {
-		return err
-	}
-
 	var sOutput string
 	if sOutput, err = d.RunShellCommand("monkey -p", appPackageName, "-c android.intent.category.LAUNCHER 1"); err != nil {
 		return err
@@ -400,9 +382,51 @@ func (d *Device) AppLaunch(appPackageName string) (err error) {
 }
 
 func (d *Device) AppTerminate(appPackageName string) (err error) {
-	if err = d.check(); err != nil {
-		return err
-	}
 	_, err = d.RunShellCommand("am force-stop", appPackageName)
 	return
+}
+
+func (d *Device) AppListRunning() []string {
+	output, err := d.RunShellCommand("pm", "list", "packages")
+	if err != nil {
+		return nil
+	}
+	reg := regexp.MustCompile(`package:(\S+)`)
+	packageNames := reg.FindAllStringSubmatch(output, -1)
+
+	reg = regexp.MustCompile(`(\S+)\r*\n`)
+	output, err = d.RunShellCommand("ps; ps -A")
+	if err != nil {
+		return nil
+	}
+	processNames := reg.FindAllStringSubmatch(output, -1)
+
+	var result []string
+	for _, pkg := range packageNames {
+		for _, prs := range processNames {
+			if pkg[1] == prs[1] {
+				result = append(result, pkg[1])
+				break
+			}
+		}
+	}
+	return result
+}
+
+func (d *Device) AppTerminateAll(excludePackages ...string) {
+	runningApps := d.AppListRunning()
+	for _, r := range runningApps {
+		if !contains(excludePackages, r) {
+			d.AppTerminate(r)
+		}
+	}
+}
+
+func contains(l []string, v string) bool {
+	for _, r := range l {
+		if r == v {
+			return true
+		}
+	}
+	return false
 }
