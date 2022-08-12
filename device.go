@@ -335,7 +335,7 @@ func (d Device) ShellStream(cmd string) (*transport, *bufio.Scanner, error) {
 	return &tp, bufio.NewScanner(tp.sock), nil
 }
 
-func (d *Device) AppInstall(apkPath string, reinstall ...bool) (err error) {
+func (d *Device) AppInstall(apkPath string, flags []string, reinstall ...bool) (err error) {
 	apkName := filepath.Base(apkPath)
 	if !strings.HasSuffix(strings.ToLower(apkName), ".apk") {
 		return fmt.Errorf("apk file must have an extension of '.apk': %s", apkPath)
@@ -352,7 +352,9 @@ func (d *Device) AppInstall(apkPath string, reinstall ...bool) (err error) {
 	}
 
 	var shellOutput string
-	if len(reinstall) != 0 && reinstall[0] {
+	if flags != nil && len(flags) > 0 {
+		shellOutput, err = d.RunShellCommand("pm install", append(flags, remotePath)...)
+	} else if len(reinstall) != 0 && reinstall[0] {
 		shellOutput, err = d.RunShellCommand("pm install", "-r", remotePath)
 	} else {
 		shellOutput, err = d.RunShellCommand("pm install", remotePath)
