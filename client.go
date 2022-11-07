@@ -18,11 +18,7 @@ type Client struct {
 var AdbPath string
 
 func init() {
-	var err error
-	AdbPath, err = exec.LookPath("adb")
-	if err != nil {
-		panic(err)
-	}
+	AdbPath, _ = exec.LookPath("adb")
 }
 
 func StartServer() error {
