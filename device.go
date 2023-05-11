@@ -184,7 +184,7 @@ func (d Device) CreateDeviceTransport() (tp *Transport, err error) {
 		return nil, err
 	}
 
-	if err = tp.Send(fmt.Sprintf("host:Transport:%s", d.serial)); err != nil {
+	if err = tp.Send(fmt.Sprintf("host:transport:%s", d.serial)); err != nil {
 		return nil, err
 	}
 	err = tp.VerifyResponse()
