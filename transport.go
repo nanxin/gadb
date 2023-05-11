@@ -14,29 +14,29 @@ var ErrConnBroken = errors.New("socket connection broken")
 
 var DefaultAdbReadTimeout time.Duration = 120
 
-type transport struct {
+type Transport struct {
 	sock        net.Conn
-	readTimeout time.Duration
+	ReadTimeout time.Duration
 }
 
-func newTransport(address string, readTimeout ...time.Duration) (tp transport, err error) {
+func NewTransport(address string, readTimeout ...time.Duration) (tp *Transport, err error) {
 	if len(readTimeout) == 0 {
 		readTimeout = []time.Duration{DefaultAdbReadTimeout}
 	}
-	tp.readTimeout = readTimeout[0]
+	tp.ReadTimeout = readTimeout[0]
 	if tp.sock, err = net.Dial("tcp", address); err != nil {
-		err = fmt.Errorf("adb transport: %w", err)
+		err = fmt.Errorf("adb Transport: %w", err)
 	}
 	return
 }
 
-func (t transport) Send(command string) (err error) {
+func (t *Transport) Send(command string) (err error) {
 	msg := fmt.Sprintf("%04x%s", len(command), command)
 	debugLog(fmt.Sprintf("--> %s", command))
 	return _send(t.sock, []byte(msg))
 }
 
-func (t transport) VerifyResponse() (err error) {
+func (t *Transport) VerifyResponse() (err error) {
 	var status string
 	if status, err = t.ReadStringN(4); err != nil {
 		return err
@@ -55,25 +55,25 @@ func (t transport) VerifyResponse() (err error) {
 	return
 }
 
-func (t transport) ReadStringAll() (s string, err error) {
+func (t *Transport) ReadStringAll() (s string, err error) {
 	var raw []byte
 	raw, err = t.ReadBytesAll()
 	return string(raw), err
 }
 
-func (t transport) ReadBytesAll() (raw []byte, err error) {
+func (t *Transport) ReadBytesAll() (raw []byte, err error) {
 	raw, err = ioutil.ReadAll(t.sock)
 	debugLog(fmt.Sprintf("\r%s", raw))
 	return
 }
 
-func (t transport) UnpackString() (s string, err error) {
+func (t *Transport) UnpackString() (s string, err error) {
 	var raw []byte
 	raw, err = t.UnpackBytes()
 	return string(raw), err
 }
 
-func (t transport) UnpackBytes() (raw []byte, err error) {
+func (t *Transport) UnpackBytes() (raw []byte, err error) {
 	var length string
 	if length, err = t.ReadStringN(4); err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func (t transport) UnpackBytes() (raw []byte, err error) {
 	return
 }
 
-func (t transport) ReadStringN(size int) (s string, err error) {
+func (t *Transport) ReadStringN(size int) (s string, err error) {
 	var raw []byte
 	if raw, err = t.ReadBytesN(size); err != nil {
 		return "", err
@@ -96,26 +96,26 @@ func (t transport) ReadStringN(size int) (s string, err error) {
 	return string(raw), nil
 }
 
-func (t transport) ReadBytesN(size int) (raw []byte, err error) {
-	_ = t.sock.SetReadDeadline(time.Now().Add(time.Second * t.readTimeout))
+func (t *Transport) ReadBytesN(size int) (raw []byte, err error) {
+	_ = t.sock.SetReadDeadline(time.Now().Add(time.Second * t.ReadTimeout))
 	return _readN(t.sock, size)
 }
 
-func (t transport) Close() (err error) {
+func (t *Transport) Close() (err error) {
 	if t.sock == nil {
 		return nil
 	}
 	return t.sock.Close()
 }
 
-func (t transport) CreateSyncTransport() (sTp syncTransport, err error) {
+func (t *Transport) CreateSyncTransport() (sTp syncTransport, err error) {
 	if err = t.Send("sync:"); err != nil {
 		return syncTransport{}, err
 	}
 	if err = t.VerifyResponse(); err != nil {
 		return syncTransport{}, err
 	}
-	sTp = newSyncTransport(t.sock, t.readTimeout)
+	sTp = newSyncTransport(t.sock, t.ReadTimeout)
 	return
 }
 

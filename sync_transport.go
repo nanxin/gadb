@@ -25,7 +25,7 @@ func (sync syncTransport) Send(command, data string) (err error) {
 	}
 	msg := bytes.NewBufferString(command)
 	if err = binary.Write(msg, binary.LittleEndian, int32(len(data))); err != nil {
-		return fmt.Errorf("sync transport write: %w", err)
+		return fmt.Errorf("sync Transport write: %w", err)
 	}
 	msg.WriteString(data)
 
@@ -54,7 +54,7 @@ func (sync syncTransport) SendStream(reader io.Reader) (err error) {
 func (sync syncTransport) SendStatus(statusCode string, n uint32) (err error) {
 	msg := bytes.NewBufferString(statusCode)
 	if err = binary.Write(msg, binary.LittleEndian, n); err != nil {
-		return fmt.Errorf("sync transport write: %w", err)
+		return fmt.Errorf("sync Transport write: %w", err)
 	}
 	debugLog(fmt.Sprintf("--> %s", msg.String()))
 	return _send(sync.sock, msg.Bytes())
@@ -63,7 +63,7 @@ func (sync syncTransport) SendStatus(statusCode string, n uint32) (err error) {
 func (sync syncTransport) sendChunk(buffer []byte) (err error) {
 	msg := bytes.NewBufferString("DATA")
 	if err = binary.Write(msg, binary.LittleEndian, int32(len(buffer))); err != nil {
-		return fmt.Errorf("sync transport write: %w", err)
+		return fmt.Errorf("sync Transport write: %w", err)
 	}
 	debugLog(fmt.Sprintf("--> %s ......", msg.String()))
 	msg.Write(buffer)
@@ -83,7 +83,7 @@ func (sync syncTransport) VerifyStatus() (err error) {
 
 	var tmpUint32 uint32
 	if tmpUint32, err = sync.ReadUint32(); err != nil {
-		return fmt.Errorf("sync transport read (status): %w", err)
+		return fmt.Errorf("sync Transport read (status): %w", err)
 	}
 	log.WriteString(fmt.Sprintf(" %d\t", tmpUint32))
 
@@ -197,29 +197,29 @@ func (sync syncTransport) ReadDirectoryEntry() (entry DeviceFileInfo, err error)
 	log = bytes.NewBufferString(fmt.Sprintf("<-- %s\t", status))
 
 	if err = binary.Read(sync.sock, binary.LittleEndian, &entry.Mode); err != nil {
-		return DeviceFileInfo{}, fmt.Errorf("sync transport read (mode): %w", err)
+		return DeviceFileInfo{}, fmt.Errorf("sync Transport read (mode): %w", err)
 	}
 	log.WriteString(entry.Mode.String() + "\t")
 
 	if entry.Size, err = sync.ReadUint32(); err != nil {
-		return DeviceFileInfo{}, fmt.Errorf("sync transport read (size): %w", err)
+		return DeviceFileInfo{}, fmt.Errorf("sync Transport read (size): %w", err)
 	}
 	log.WriteString(fmt.Sprintf("%10d", entry.Size) + "\t")
 
 	var tmpUint32 uint32
 	if tmpUint32, err = sync.ReadUint32(); err != nil {
-		return DeviceFileInfo{}, fmt.Errorf("sync transport read (time): %w", err)
+		return DeviceFileInfo{}, fmt.Errorf("sync Transport read (time): %w", err)
 	}
 	entry.LastModified = time.Unix(int64(tmpUint32), 0)
 	log.WriteString(entry.LastModified.String() + "\t")
 
 	if tmpUint32, err = sync.ReadUint32(); err != nil {
-		return DeviceFileInfo{}, fmt.Errorf("sync transport read (file name length): %w", err)
+		return DeviceFileInfo{}, fmt.Errorf("sync Transport read (file name length): %w", err)
 	}
 	log.WriteString(fmt.Sprintf("%d\t", tmpUint32))
 
 	if entry.Name, err = sync.ReadStringN(int(tmpUint32)); err != nil {
-		return DeviceFileInfo{}, fmt.Errorf("sync transport read (file name): %w", err)
+		return DeviceFileInfo{}, fmt.Errorf("sync Transport read (file name): %w", err)
 	}
 	log.WriteString(entry.Name + "\t")
 

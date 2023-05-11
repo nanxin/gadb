@@ -7,13 +7,13 @@ import (
 func Test_transport_VerifyResponse(t *testing.T) {
 	SetDebug(true)
 
-	transport, err := newTransport("localhost:5037")
+	transport, err := NewTransport("localhost:5037")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer transport.Close()
 
-	// err = transport.Send("host:123version")
+	// err = Transport.Send("host:123version")
 	err = transport.Send("host:version")
 	if err != nil {
 		t.Fatal(err)
