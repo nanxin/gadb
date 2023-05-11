@@ -23,7 +23,7 @@ func NewTransport(address string, readTimeout ...time.Duration) (tp *Transport, 
 	if len(readTimeout) == 0 {
 		readTimeout = []time.Duration{DefaultAdbReadTimeout}
 	}
-	tp.ReadTimeout = readTimeout[0]
+	tp = &Transport{ReadTimeout: readTimeout[0]}
 	if tp.sock, err = net.Dial("tcp", address); err != nil {
 		err = fmt.Errorf("adb Transport: %w", err)
 	}
