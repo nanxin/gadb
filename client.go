@@ -49,7 +49,7 @@ func NewClientWith(host string, port ...int) (adbClient Client, err error) {
 	adbClient.host = host
 	adbClient.port = port[0]
 
-	var tp Transport
+	var tp *Transport
 	if tp, err = adbClient.createTransport(); err != nil {
 		return Client{}, err
 	}
@@ -197,7 +197,7 @@ func (c Client) DisconnectAll() (err error) {
 }
 
 func (c Client) KillServer() (err error) {
-	var tp Transport
+	var tp *Transport
 	if tp, err = c.createTransport(); err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func (c Client) KillServer() (err error) {
 	return
 }
 
-func (c Client) createTransport() (tp Transport, err error) {
+func (c Client) createTransport() (tp *Transport, err error) {
 	return NewTransport(fmt.Sprintf("%s:%d", c.host, c.port))
 }
 
@@ -216,7 +216,7 @@ func (c Client) executeCommand(command string, onlyVerifyResponse ...bool) (resp
 		onlyVerifyResponse = []bool{false}
 	}
 
-	var tp Transport
+	var tp *Transport
 	if tp, err = c.createTransport(); err != nil {
 		return "", err
 	}
